@@ -1,6 +1,6 @@
 "use client";
-import toast, { Toaster } from 'react-hot-toast';
-import React, { useState, useEffect } from "react";
+import toast from 'react-hot-toast';
+import React, { useState, useEffect , useCallback} from "react";
 import { useMonadContract } from "../smart-contract/monad_contract";
 
 const HomePage = () => {
@@ -23,13 +23,7 @@ const HomePage = () => {
   const [stakedBalance, setStakedBalance] = useState("0");
   const [nextWithdraw, setNextWithdraw] = useState("0");
 
-  useEffect(() => {
-    if (signerAddress) {
-      fetchBalances();
-    }
-  }, [signerAddress]);
-
-  const fetchBalances = async () => {
+  const fetchBalances = useCallback(async () => {
     try {
       const [balance, lockTime, monBal] = await Promise.all([
         getStakedBalance(),
@@ -42,16 +36,24 @@ const HomePage = () => {
     } catch (error) {
       console.error("Error fetching balances:", error);
     }
-  };
+  }, [getStakedBalance, getRemainingLockTime, getWmonBalance]);
+  
+  useEffect(() => {
+    if (signerAddress) {
+      fetchBalances();
+    }
+  }, [signerAddress, fetchBalances]);  
 
-  const formatTime = (seconds: any) => {
+  const formatTime = (seconds: number | string): string => {
     const sec = Number(seconds);
-    const hours = Math.floor(sec / 3600);
-    const days = Math.floor(hours / 24);
+    if (isNaN(sec) || sec < 0) return "⏳ N/A";
+    
+    const days = Math.floor(sec / 86400);
+    const hours = Math.floor((sec % 86400) / 3600);
     if (days > 0) return `⏳ ${days} days`;
     if (hours > 0) return `⏳ ${hours} hours`;
     return `⏳ ${sec} seconds`;
-  };
+  };  
 
   const handleDeposit = async () => {
     if (!depositAmount || isNaN(Number(depositAmount)) || Number(depositAmount) <= 0) {
